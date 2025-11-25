@@ -5,6 +5,7 @@ import { Play, SkipForward, Music, Users } from 'lucide-react';
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import QRCode from "react-qr-code";
 import { toast } from 'sonner'
+import confetti from 'canvas-confetti';
 
 function DashboardContent() {
     const searchParams = useSearchParams();
@@ -58,6 +59,40 @@ function DashboardContent() {
             if (event.data === "update_queue") {
                 console.log("🔄 Actualizando cola...");
                 fetchQueue();
+            }
+        };
+
+        // Dentro del useEffect del WebSocket:
+        ws.onmessage = (event) => {
+            if (event.data === "update_queue") {
+                console.log("🔄 Actualizando cola...");
+                fetchQueue();
+
+                // ✨ EFECTO JUICY EN LA TV ✨
+                // Lanza confeti desde las dos esquinas inferiores
+                const duration = 3000;
+                const end = Date.now() + duration;
+
+                (function frame() {
+                    confetti({
+                        particleCount: 5,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0, y: 0.8 }, // Esquina inf. izquierda
+                        colors: ['#22c55e', '#ffffff'] // Verde y blanco
+                    });
+                    confetti({
+                        particleCount: 5,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1, y: 0.8 }, // Esquina inf. derecha
+                        colors: ['#22c55e', '#ffffff']
+                    });
+
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    }
+                }());
             }
         };
 
