@@ -1,0 +1,23 @@
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# URL de conexión: postgresql://usuario:contraseña@servidor:puerto/nombre_db
+SQLALCHEMY_DATABASE_URL = "postgresql://admin:adminpassword@localhost/jam_database"
+
+# Creamos el motor de conexión
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+# Creamos la sesión (la herramienta para hacer consultas)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# La clase base de la que heredarán nuestros modelos
+Base = declarative_base()
+
+# Dependencia para obtener la DB en cada petición
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

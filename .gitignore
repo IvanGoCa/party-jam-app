@@ -1,0 +1,26 @@
+# --- COSAS DE SISTEMA ---
+.DS_Store
+Thumbs.db
+
+.env
+.env.local
+*.pem
+
+# --- PYTHON (BACKEND) ---
+__pycache__/
+*.py[cod]
+Backend/venv/
+Backend/.venv/
+*.sqlite3
+
+# --- NODE/REACT (FRONTEND) ---
+node_modules/
+.next/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- DOCKER ---
+.postgres_data/
