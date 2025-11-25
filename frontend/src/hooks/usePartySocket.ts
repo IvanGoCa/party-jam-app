@@ -10,7 +10,7 @@ export const usePartySocket = (
         if (!roomCode) return;
 
         // IP de tu PC (asegúrate de que es la correcta)
-        const WS_URL = `ws://192.168.10.10:8000/ws/${roomCode}`;
+        const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
 
         console.log("🔌 Intentando conectar WS a:", WS_URL);
         const ws = new WebSocket(WS_URL);

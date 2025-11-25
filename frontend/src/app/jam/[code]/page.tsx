@@ -5,6 +5,9 @@ import { Search, Music, Plus, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+
 export default function GuestPage({ params }: { params: Promise<{ code: string }> }) {
     const [resolvedParams, setResolvedParams] = useState<{ code: string } | null>(null);
     const [roomInfo, setRoomInfo] = useState<any>(null);
@@ -35,7 +38,7 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
     const fetchQueue = useCallback(async () => {
         if (!resolvedParams) return;
         try {
-            const res = await fetch(`http://192.168.10.10:8000/queue/${resolvedParams.code}`);
+            const res = await fetch(`${API_URL}:8000/queue/${resolvedParams.code}`);
             const data = await res.json();
             if (Array.isArray(data)) setQueue(data);
         } catch (e) { console.error(e); }
@@ -45,11 +48,11 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
         if (!resolvedParams) return;
 
         // Carga inicial...
-        fetch(`http://192.168.10.10:8000/join/${resolvedParams.code}`).then(r => r.json()).then(setRoomInfo);
+        fetch(`${API_URL}/join/${resolvedParams.code}`).then(r => r.json()).then(setRoomInfo);
         fetchQueue();
 
         // CONEXIÓN WS
-        const wsUrl = `ws://192.168.10.10:8000/ws/${resolvedParams.code}`;
+        const wsUrl = `${WS_URL}/ws/${resolvedParams.code}`;
         console.log("🔌 Invitado intentando conectar a:", wsUrl);
 
         const ws = new WebSocket(wsUrl);
@@ -76,7 +79,7 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
         setSearchResults([]);
 
         try {
-            await fetch(`http://192.168.10.10:8000/add-song`, {
+            await fetch(`${API_URL}/add-song`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -115,7 +118,7 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
         });
 
         try {
-            await fetch(`http://192.168.10.10:8000/vote`, {
+            await fetch(`${API_URL}/vote`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -137,7 +140,7 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
         setSearching(true);
         setSearchResults([]);
         try {
-            const res = await fetch(`http://192.168.10.10:8000/search?query=${searchQuery}&code=${resolvedParams.code}`);
+            const res = await fetch(`${API_URL}/search?query=${searchQuery}&code=${resolvedParams.code}`);
             if (!res.ok) {
                 toast.error("Error buscando. ¿Se acabó la fiesta?");
                 return;

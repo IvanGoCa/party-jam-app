@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { Music, Zap } from 'lucide-react'; // Iconos bonitos (ahora los instalamos)
 
 export default function Home() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   // Esta URL apunta a tu Backend Python que acabamos de hacer
-  const LOGIN_URL = "http://192.168.10.10:8000/login";
+  const LOGIN_URL = `${API_URL}/login`;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center bg-black text-white">

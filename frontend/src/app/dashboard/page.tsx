@@ -7,6 +7,9 @@ import QRCode from "react-qr-code";
 import { toast } from 'sonner'
 import confetti from 'canvas-confetti';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+
 function DashboardContent() {
     const searchParams = useSearchParams();
     const hostId = searchParams.get('hostId');
@@ -21,7 +24,7 @@ function DashboardContent() {
         if (!hostId) return;
         setLoading(true);
         try {
-            const res = await fetch(`http://192.168.10.10:8000/create-room?host_id=${hostId}`, { method: 'POST' });
+            const res = await fetch(`${API_URL}/create-room?host_id=${hostId}`, { method: 'POST' });
             const data = await res.json();
             if (data.status === "Sala Creada") {
                 setRoomData({ code: data.room_code, id: data.room_id });
@@ -32,7 +35,7 @@ function DashboardContent() {
     // --- 2. CARGAR COLA (Igual que el invitado) ---
     const fetchQueue = useCallback(async () => {
         if (!roomData) return;
-        const res = await fetch(`http://192.168.10.10:8000/queue/${roomData.code}`);
+        const res = await fetch(`${API_URL}/queue/${roomData.code}`);
         const data = await res.json();
         setQueue(data);
     }, [roomData]);
@@ -45,7 +48,7 @@ function DashboardContent() {
 
         // 2. CONEXIÓN WS
         // OJO: Fíjate que pone 'ws://' y tu IP exacta
-        const wsUrl = `ws://192.168.10.10:8000/ws/${roomData.code}`;
+        const wsUrl = `${WS_URL}/ws/${roomData.code}`;
         console.log("🔌 Dashboard intentando conectar a:", wsUrl);
 
         const ws = new WebSocket(wsUrl);
@@ -106,7 +109,7 @@ function DashboardContent() {
     const handlePlayNext = async () => {
         if (!roomData) return;
         try {
-            const res = await fetch(`http://192.168.10.10:8000/play-next?room_code=${roomData.code}`, { method: 'POST' });
+            const res = await fetch(`${API_URL}/play-next?room_code=${roomData.code}`, { method: 'POST' });
             const data = await res.json();
 
             if (data.status === "playing") {
