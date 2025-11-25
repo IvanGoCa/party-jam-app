@@ -144,8 +144,11 @@ def callback(code: str, db: Session = Depends(get_db)):
     
     el_host_id = db_host.id if db_host else new_host.id
 
-    # Volvemos al Frontend (Puerto 3000)
-    return RedirectResponse(url=f"http://192.168.10.10:3000/dashboard?hostId={el_host_id}")
+    # --- CAMBIO IMPORTANTE PARA PRODUCCIÓN ---
+    # Leemos la variable FRONTEND_URL. Si no existe, usamos localhost por defecto.
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    return RedirectResponse(url=f"{frontend_url}/dashboard?hostId={el_host_id}")
 
 # --- UTILIDAD: GENERADOR DE CÓDIGOS ---
 def generate_room_code():
