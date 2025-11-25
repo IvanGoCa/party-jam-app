@@ -144,8 +144,10 @@ def callback(code: str, db: Session = Depends(get_db)):
     
     el_host_id = db_host.id if db_host else new_host.id
 
-    # Volvemos al Frontend (Puerto 3000)
-    return RedirectResponse(url=f"https://party-jam-fsxq2adhr-ivangocas-projects.vercel.app/dashboard?hostId={el_host_id}")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+    # Redirigimos a la URL correcta
+    return RedirectResponse(url=f"{frontend_url}/dashboard?hostId={el_host_id}")
 
 # --- UTILIDAD: GENERADOR DE CÓDIGOS ---
 def generate_room_code():
