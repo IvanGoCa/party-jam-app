@@ -5,6 +5,13 @@ from sqlalchemy.orm import sessionmaker
 
 # URL de conexión: postgresql://usuario:contraseña@servidor:puerto/nombre_db
 db_url = os.getenv("DATABASE_URL", "postgresql://admin:adminpassword@localhost/jam_database")
+
+if db_url:
+    print(f"🚀 RENDER DETECTADO: Usando base de datos en la nube: {db_url.split('@')[1]}")
+else:
+    print("⚠️ VARIABLE NO ENCONTRADA: Usando localhost (Esto fallará en Render)")
+    db_url = "postgresql://admin:adminpassword@localhost/jam_database"
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
