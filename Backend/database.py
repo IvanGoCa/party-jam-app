@@ -1,9 +1,14 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # URL de conexión: postgresql://usuario:contraseña@servidor:puerto/nombre_db
-SQLALCHEMY_DATABASE_URL = "postgresql://admin:adminpassword@localhost/jam_database"
+db_url = os.getenv("DATABASE_URL", "postgresql://admin:adminpassword@localhost/jam_database")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+SQLALCHEMY_DATABASE_URL = db_url
 
 # Creamos el motor de conexión
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
