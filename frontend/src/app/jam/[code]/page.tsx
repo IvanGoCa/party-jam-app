@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Music, Plus, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 export default function GuestPage({ params }: { params: Promise<{ code: string }> }) {
     const [resolvedParams, setResolvedParams] = useState<{ code: string } | null>(null);
@@ -42,14 +43,27 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
 
     useEffect(() => {
         if (!resolvedParams) return;
-        fetch(`http://192.168.10.10:8000/join/${resolvedParams.code}`)
-            .then(res => res.ok ? res.json() : Promise.reject())
-            .then(setRoomInfo)
-            .catch(() => { });
 
+        // Carga inicial...
+        fetch(`http://192.168.10.10:8000/join/${resolvedParams.code}`).then(r => r.json()).then(setRoomInfo);
         fetchQueue();
-        const interval = setInterval(fetchQueue, 3000);
-        return () => clearInterval(interval);
+
+        // CONEXIÓN WS
+        const wsUrl = `ws://192.168.10.10:8000/ws/${resolvedParams.code}`;
+        console.log("🔌 Invitado intentando conectar a:", wsUrl);
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => console.log("🟢 Invitado: ¡Socket Conectado!");
+        ws.onerror = (e) => console.error("🔴 Invitado: Error en Socket", e);
+
+        ws.onmessage = (event) => {
+            if (event.data === "update_queue") {
+                fetchQueue();
+            }
+        };
+
+        return () => ws.close();
     }, [resolvedParams, fetchQueue]);
 
 
@@ -92,6 +106,13 @@ export default function GuestPage({ params }: { params: Promise<{ code: string }
             }
             return item;
         }));
+
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }, // Sale desde un poco más abajo del centro
+            colors: ['#22c55e', '#ffffff'] // Verde Spotify y Blanco
+        });
 
         try {
             await fetch(`http://192.168.10.10:8000/vote`, {

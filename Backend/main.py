@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from starlette.responses import RedirectResponse
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List, Dict
 
 import random
 import string
@@ -19,6 +20,36 @@ from fastapi.middleware.cors import CORSMiddleware
 # Importamos lo nuestro
 from database import engine, get_db
 import models
+
+# --- GESTOR DE WEBSOCKETS ---
+class ConnectionManager:
+    def __init__(self):
+        # Guardamos listas de conexiones por sala: {'X9Z2': [ws1, ws2], 'A1B2': [ws3]}
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, room_code: str):
+        await websocket.accept()
+        if room_code not in self.active_connections:
+            self.active_connections[room_code] = []
+        self.active_connections[room_code].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, room_code: str):
+        if room_code in self.active_connections:
+            self.active_connections[room_code].remove(websocket)
+            if len(self.active_connections[room_code]) == 0:
+                del self.active_connections[room_code]
+
+    async def broadcast(self, message: str, room_code: str):
+        if room_code in self.active_connections:
+            # Avisamos a todos los conectados a esa sala
+            for connection in self.active_connections[room_code]:
+                try:
+                    await connection.send_text(message)
+                except:
+                    # Si falla, es que se desconectó mal, lo ignoramos por ahora
+                    pass
+
+manager = ConnectionManager()
 
 # Cargar variables del archivo .env
 load_dotenv()
@@ -250,7 +281,7 @@ def get_or_create_guest(db: Session, guest_id: str, room_id: int):
 
 # --- ENDPOINT 6: AÑADIR CANCIÓN A LA COLA ---
 @app.post("/add-song")
-def add_song(song: SongRequest, db: Session = Depends(get_db)):
+async def add_song(song: SongRequest, db: Session = Depends(get_db)):
     # 1. Buscamos la sala
     room = db.query(models.Room).filter(models.Room.code == song.code.upper()).first()
     if not room:
@@ -289,6 +320,8 @@ def add_song(song: SongRequest, db: Session = Depends(get_db)):
     db.add(new_vote)
     db.commit()
     
+    await manager.broadcast("update_queue", room.code)
+    
     return {"status": "added", "title": song.title}
 
 # --- ENDPOINT 7: VER LA COLA (Para pintar la lista) ---
@@ -308,7 +341,7 @@ def get_queue(code: str, db: Session = Depends(get_db)):
 
 # --- ENDPOINT 8: LANZAR LA SIGUIENTE (DJ AUTOMÁTICO) ---
 @app.post("/play-next")
-def play_next_song(room_code: str, db: Session = Depends(get_db)):
+async def play_next_song(room_code: str, db: Session = Depends(get_db)):
     # 1. Buscamos la sala
     room = db.query(models.Room).filter(models.Room.code == room_code.upper()).first()
     if not room:
@@ -335,6 +368,8 @@ def play_next_song(room_code: str, db: Session = Depends(get_db)):
         next_song.status = "PLAYED"
         db.commit()
         
+        await manager.broadcast("update_queue", room_code)
+        
         return {"status": "playing", "title": next_song.title}
 
     except Exception as e:
@@ -342,8 +377,9 @@ def play_next_song(room_code: str, db: Session = Depends(get_db)):
         # Si falla, suele ser porque no hay Spotify abierto o el token caducó
         raise HTTPException(status_code=400, detail="Asegúrate de tener Spotify abierto y sonando")
     
+# --- ENDPOINT 9: SISTEMA DE VOTOS ---
 @app.post("/vote")
-def toggle_vote(req: VoteRequest, db: Session = Depends(get_db)):
+async def toggle_vote(req: VoteRequest, db: Session = Depends(get_db)):
     room = db.query(models.Room).filter(models.Room.code == req.code.upper()).first()
     if not room:
         raise HTTPException(status_code=404, detail="Sala no encontrada")
@@ -379,4 +415,18 @@ def toggle_vote(req: VoteRequest, db: Session = Depends(get_db)):
         action = "added"
 
     db.commit()
+    await manager.broadcast("update_queue", room.code)
     return {"status": "ok", "action": action, "new_count": item.vote_count}
+
+# --- ENDPOINT 10: CANAL WEBSOCKET ---
+@app.websocket("/ws/{room_code}")
+async def websocket_endpoint(websocket: WebSocket, room_code: str):
+    room_code = room_code.upper()
+    await manager.connect(websocket, room_code)
+    try:
+        while True:
+            # Nos quedamos escuchando (aunque realmente el cliente no envía nada por aquí, solo escucha)
+            # Esto mantiene la conexión abierta ("ping-pong")
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, room_code)

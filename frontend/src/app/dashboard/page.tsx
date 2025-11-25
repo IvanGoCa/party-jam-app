@@ -38,9 +38,33 @@ function DashboardContent() {
 
     useEffect(() => {
         if (!roomData) return;
+
+        // 1. Carga inicial
         fetchQueue();
-        const interval = setInterval(fetchQueue, 3000); // Refrescar cada 3s
-        return () => clearInterval(interval);
+
+        // 2. CONEXIÓN WS
+        // OJO: Fíjate que pone 'ws://' y tu IP exacta
+        const wsUrl = `ws://192.168.10.10:8000/ws/${roomData.code}`;
+        console.log("🔌 Dashboard intentando conectar a:", wsUrl);
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => console.log("🟢 Dashboard: ¡Socket Conectado!");
+
+        ws.onerror = (e) => console.error("🔴 Dashboard: Error en Socket", e);
+
+        ws.onmessage = (event) => {
+            console.log("📩 Mensaje recibido:", event.data);
+            if (event.data === "update_queue") {
+                console.log("🔄 Actualizando cola...");
+                fetchQueue();
+            }
+        };
+
+        return () => {
+            console.log("🔌 Desconectando socket...");
+            ws.close();
+        };
     }, [roomData, fetchQueue]);
 
     // --- 3. BOTÓN: LANZAR SIGUIENTE ---
